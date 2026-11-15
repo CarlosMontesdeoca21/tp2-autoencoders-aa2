@@ -15,11 +15,11 @@ class Autoencoder_SuperRes(nn.Module):
             nn.ReLU(),
             nn.Conv2d(16, 32, 3, stride=2, padding=1),  
             nn.ReLU(),
-            nn.AdaptiveAvgPool2d(1)                     
+            nn.AdaptiveAvgPool2d(4)                     
         )
 
         self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(32, 16, 7),                                        
+            nn.ConvTranspose2d(32, 16, 4),                                        
             nn.ReLU(),
             nn.ConvTranspose2d(16, 8, 3, stride=2, padding=1, output_padding=1),  
             nn.ReLU(),
