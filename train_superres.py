@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from superresolution import Autoencoder_SuperRes, downsample
 from data_loader import data_loader
 
-NUM_EPOCHS = 10
+NUM_EPOCHS = 20
 LR = 1e-3
 WEIGHT_DECAY = 1e-5
 FACTORS = (2, 4)
