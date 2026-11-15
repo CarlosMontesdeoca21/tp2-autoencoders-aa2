@@ -61,9 +61,9 @@ No se modifica la arquitectura original; solo cambia que la entrada lleva ruido 
 
 | Archivo | Descripción |
 |---|---|
-| `noise.py` | Función `add_gaussian_noise()`: añade ruido gaussiano y recorta a [0, 1] |
-| `train_noise.py` | Entrena el autoencoder con entrada ruidosa → objetivo limpio. Guarda los pesos y la curva de pérdida |
-| `results_noise.py` | Carga los pesos entrenados y genera la matriz de resultados y las métricas sobre el test set |
+| `src/noise.py` | Función `add_gaussian_noise()`: añade ruido gaussiano y recorta a [0, 1] |
+| `scripts/train_noise.py` | Entrena el autoencoder con entrada ruidosa → objetivo limpio. Guarda los pesos y la curva de pérdida |
+| `scripts/results_noise.py` | Carga los pesos entrenados y genera la matriz de resultados y las métricas sobre el test set |
 | `checkpoints/noise_autoencoder.pt` | Pesos del modelo entrenado |
 | `results/loss_curve.png` | Curva de pérdida del entrenamiento |
 | `results/noise_cancellation.png` | Matriz de resultados (real / ruido / denoised) |
@@ -75,13 +75,13 @@ Desde la raíz del repositorio (`tp2-autoencoders-aa2/`):
 
 ```bash
 # 1. Entrenar el autoencoder (genera checkpoints/ y results/loss_curve.png)
-python train_noise.py
+python3 -m scripts.train_noise
 
 # 2. Generar resultados y métricas sobre el test set (genera results/noise_cancellation.png)
-python results_noise.py
+python3 -m scripts.results_noise
 ```
 
-> Nota: la primera ejecución descarga el dataset MNIST automáticamente en `data/`.
+> Nota: la primera ejecución descarga el dataset MNIST automáticamente en `data/`. Los comandos usan `-m` y se ejecutan desde la raíz para que Python encuentre el paquete `src/`.
 
 ### Resultados
 
@@ -136,7 +136,7 @@ Salida 28×28 en [0,1]
 
 - **`F.interpolate`** redimensiona la imagen pequeña a un lienzo de 28×28 interpolando entre píxeles vecinos. No inventa información (por eso sale suave), pero sitúa la forma del dígito en su posición correcta.
 - **Encoder/decoder:** seis convoluciones con `padding=1` que **conservan el tamaño** (28→28): extraen rasgos (1→32→64 canales) y los convierten en el gris final de cada píxel (64→32→1). Cada píxel de salida se calcula de una ventana local de 3×3, lo que permite **afilar bordes** en vez de estirar bloques.
-- **`downsample(images, factor)`** (en `superresolution.py`) reduce las imágenes con `avg_pool2d`: factor 2 → 14×14, factor 4 → 7×7.
+- **`downsample(images, factor)`** (en `src/superresolution.py`) reduce las imágenes con `avg_pool2d`: factor 2 → 14×14, factor 4 → 7×7.
 
 ### Hiperparámetros
 
@@ -154,9 +154,9 @@ Salida 28×28 en [0,1]
 
 | Archivo | Descripción |
 |---|---|
-| `superresolution.py` | Clase del modelo (interpolate + encoder/decoder) y función `downsample()` |
-| `train_superres.py` | Entrenamiento con validación por época y early stopping; guarda el mejor modelo y la curva |
-| `results_superres.py` | Carga el mejor modelo y genera la matriz de resultados y las métricas sobre el test |
+| `src/superresolution.py` | Clase del modelo (interpolate + encoder/decoder) y función `downsample()` |
+| `scripts/train_superres.py` | Entrenamiento con validación por época y early stopping; guarda el mejor modelo y la curva |
+| `scripts/results_superres.py` | Carga el mejor modelo y genera la matriz de resultados y las métricas sobre el test |
 | `checkpoints/superres_autoencoder.pt` | Mejor modelo (época 12) |
 | `results/loss_curve_superres.png` | Curva de pérdida train vs test |
 | `results/superresolution.png` | Matriz de resultados (real / reducida / generada) |
@@ -164,12 +164,14 @@ Salida 28×28 en [0,1]
 
 ### Cómo ejecutar
 
+Desde la raíz del repositorio (`tp2-autoencoders-aa2/`):
+
 ```bash
 # 1. Entrenar (genera checkpoints/ y results/loss_curve_superres.png)
-python3 train_superres.py
+python3 -m scripts.train_superres
 
 # 2. Generar resultados y métricas sobre el test set (genera results/superresolution.png)
-python3 results_superres.py
+python3 -m scripts.results_superres
 ```
 
 > Nota: la primera ejecución descarga el dataset MNIST automáticamente en `data/`.
