@@ -7,9 +7,9 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from autoencoder import Autoencoder
-from data_loader import data_loader
-from noise import add_gaussian_noise
+from src.autoencoder import Autoencoder
+from src.data_loader import data_loader
+from src.noise import add_gaussian_noise
 
 NOISE_STD = 0.35
 NUM_EPOCHS = 10

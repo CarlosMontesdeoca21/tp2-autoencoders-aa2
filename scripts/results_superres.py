@@ -8,8 +8,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from superresolution import Autoencoder_SuperRes, downsample
-from data_loader import data_loader_valid
+from src.superresolution import Autoencoder_SuperRes, downsample
+from src.data_loader import data_loader_valid
 
 CHECKPOINT_PATH = os.path.join('checkpoints', 'superres_autoencoder.pt')
 RESULTS_DIR = 'results'

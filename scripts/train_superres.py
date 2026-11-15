@@ -8,8 +8,8 @@ import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
-from superresolution import Autoencoder_SuperRes, downsample
-from data_loader import data_loader, data_loader_valid
+from src.superresolution import Autoencoder_SuperRes, downsample
+from src.data_loader import data_loader, data_loader_valid
 
 NUM_EPOCHS = 40        # techo de épocas: el early stopping puede parar antes
 PATIENCE = 5           # épocas seguidas sin mejorar en validación antes de parar
