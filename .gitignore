@@ -1,0 +1,11 @@
+data/
+
+__pycache__/
+
+checkpoints/
+
+.ipynb_checkpoints/
+
+.vscode/
+.idea/
+AGENTS.md
