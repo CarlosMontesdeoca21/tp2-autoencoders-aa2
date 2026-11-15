@@ -28,6 +28,7 @@ checkpoint = torch.load(CHECKPOINT_PATH, map_location=device)
 model.load_state_dict(checkpoint['model_state_dict'])
 model.eval()
 
+torch.manual_seed(42)
 dataiter = iter(data_loader_valid)
 images, _ = next(dataiter)
 images = images[:COLS].to(device)          
@@ -101,7 +102,12 @@ for i in range(COLS):
     plt.yticks([])
 
     plt.subplot(3, COLS, COLS + i + 1)
-    plt.imshow(small[0])
+    escala = small.shape[-1] / 28.0        # 14/28 = 0.5   |   7/28 = 0.25
+    plt.imshow(small[0], interpolation='nearest',
+            extent=(0.5 - escala / 2, 0.5 + escala / 2,
+            0.5 - escala / 2, 0.5 + escala / 2))
+    plt.xlim(0, 1)
+    plt.ylim(0, 1)
     if i == 0:
         plt.ylabel('Reducida\n(14x14 / 7x7)')
     plt.xticks([])
