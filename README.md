@@ -1,12 +1,5 @@
 # Práctica 2: Autoencoders
 
-Un **autoencoder** es un tipo de red neuronal utilizada principalmente para tareas de compresión de datos y reducción de dimensionalidad. Su arquitectura consta de dos partes principales:
-
-- **Codificador (Encoder):** comprime los datos de entrada en una representación de menor dimensión, conocida como el espacio latente o embebido.
-- **Decodificador (Decoder):** reconstruye los datos originales a partir de esta representación comprimida.
-
-El objetivo principal de un autoencoder es minimizar la diferencia entre los datos de entrada y los datos reconstruidos.
-
 En esta práctica utilizamos un autoencoder para realizar dos tareas:
 
 1. **Eliminación de ruido** (denoising) — [ver sección](#1-eliminación-de-ruido)
@@ -39,7 +32,7 @@ La pérdida (MSE) se calcula siempre contra la imagen limpia, nunca contra la ru
 
 ### Arquitectura
 
-Se utiliza el autoencoder convolutivo suministrado en clase (`autoencoder.py`):
+Se utiliza el autoencoder convolutivo suministrado en clase (`autoencoder.py`) renombrado a (`noise_autoencoder.py`):
 
 - **Encoder:** `Conv2d(1→16, stride 2)` → `Conv2d(16→32, stride 2)` → `Conv2d(32→64, kernel 7)`, con ReLU. Comprime la imagen 28×28 a una representación latente de 64×1×1.
 - **Decoder:** `ConvTranspose2d` inversas hasta recuperar 28×28, con `Sigmoid` de salida (valores en [0, 1]).
@@ -85,7 +78,7 @@ python3 -m scripts.results_noise
 
 ### Resultados
 
-**Curva de pérdida** — la loss baja de forma estable durante las 10 épocas (0.0401 → 0.0075):
+**Curva de pérdida** — la pérdida baja de forma estable durante las 10 épocas (0.0401 → 0.0075):
 
 ![Curva de pérdida](results/loss_curve.png)
 
@@ -93,7 +86,7 @@ python3 -m scripts.results_noise
 
 ![Eliminación de ruido](results/noise_cancellation.png)
 
-**Métricas sobre el test set** (imagen real vs. ruidosa, y imagen real vs. denoised):
+**Métricas sobre el conjunto de test** (imagen real vs. ruidosa, y imagen real vs. denoised):
 
 | Métrica | Con ruido | Denoised |
 |---|---|---|
@@ -103,8 +96,8 @@ python3 -m scripts.results_noise
 ### Conclusiones
 
 - El autoencoder **elimina eficazmente el ruido gaussiano**: el MSE se reduce ~9 veces y el PSNR mejora ~9.5 dB respecto a la imagen ruidosa.
-- La mejora se mantiene sobre el **test set**, imágenes nunca vistas durante el entrenamiento, por lo que el modelo generaliza y no solo memoriza.
-- El resultado denoised no es idéntico al original: se aprecia un ligero suavizado de los bordes, que es el coste esperado de eliminar el ruido.
+- La mejora se mantiene sobre el **conjunto de test**, imágenes nunca vistas durante el entrenamiento, por lo que el modelo generaliza y no solo memoriza.
+- El resultado sin ruido no es idéntico al original: se aprecia un ligero suavizado de los bordes, que es el coste esperado de eliminar el ruido.
 
 ---
 
@@ -147,17 +140,17 @@ Salida 28×28 en [0,1]
 | Optimizador | Adam (lr = 1e-3, weight_decay = 1e-5) |
 | Función de pérdida | MSE |
 | Batch size | 64 |
-| Validación | test set completo (con los dos factores) al final de cada época |
+| Validación | conjunto de test completo (con los dos factores) al final de cada época |
 | Dataset | MNIST (train para entrenar, test para validar y evaluar) |
 
 ### Archivos
 
 | Archivo | Descripción |
 |---|---|
-| `src/superresolution.py` | Clase del modelo (interpolate + encoder/decoder) y función `downsample()` |
+| `src/resolution_autoencoder.py` | Clase del modelo (interpolate + encoder/decoder) y función `downsample()` |
 | `scripts/train_superres.py` | Entrenamiento con validación por época y early stopping; guarda el mejor modelo y la curva |
 | `scripts/results_superres.py` | Carga el mejor modelo y genera la matriz de resultados y las métricas sobre el test |
-| `checkpoints/superres_autoencoder.pt` | Mejor modelo (época 12) |
+| `checkpoints/resolution_autoencoder.pt` | Mejor modelo (época 12) |
 | `results/loss_curve_superres.png` | Curva de pérdida train vs test |
 | `results/superresolution.png` | Matriz de resultados (real / reducida / generada) |
 | `results/metrics_superres.json` | Métricas de entrenamiento, validación y test |
@@ -186,7 +179,7 @@ python3 -m scripts.results_superres
 
 ![Super-resolution](results/superresolution.png)
 
-**Métricas sobre el test set** (comparando con ampliar la imagen reducida *a lo bruto* con interpolación nearest):
+**Métricas sobre el conjunto de test** (comparando con ampliar la imagen reducida *a lo bruto* con interpolación nearest):
 
 | Métrica | 14×14 (bruto → red) | 7×7 (bruto → red) |
 |---|---|---|
@@ -196,6 +189,6 @@ python3 -m scripts.results_superres
 ### Conclusiones
 
 - La super-resolución con 14×14 es casi perfecta (**+8.9 dB** sobre ampliar a lo bruto): 196 píxeles conservan la forma del dígito y la red solo tiene que afilar los bordes.
-- Con 7×7 la mejora sigue siendo clara (**+6.2 dB**), pero aparece el **límite de la información**: con solo 49 píxeles, algunos dígitos reducidos son ilegibles ni siquiera para un humano (el 4 y el 8 de la matriz), y la red *adivina* la forma más plausible. No se puede recuperar lo que la entrada ya no contiene.
+- Con 7×7 la mejora sigue siendo clara (**+6.2 dB**), pero aparece el **límite de la información**: con solo 49 píxeles, algunos dígitos reducidos son ilegibles ni siquiera para un humano (el 4 de la matriz), y la red *adivina* la forma más plausible. No se puede recuperar lo que la entrada ya no contiene.
 - El **early stopping** confirmó la intuición de que sobraban épocas (paró en la 17 con un techo de 40), y la curva train/test demostró la **ausencia de sobreajuste**: las dos descienden juntas y el test nunca se deteriora.
 - El MSE tiende a producir bordes suaves: cuando la red duda entre dos formas posibles, predecir la media le sale más barato que arriesgar una forma concreta. Es un comportamiento conocido de la super-resolución optimizada con MSE.
