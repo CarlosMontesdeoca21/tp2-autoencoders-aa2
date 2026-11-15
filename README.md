@@ -110,4 +110,90 @@ python results_noise.py
 
 ## 2. Super-resolution
 
-*Sección pendiente de completar.*
+### Idea general
+
+La super-resolución consiste en **aumentar artificialmente la resolución** de una imagen: el autoencoder recibe una imagen **pequeña** —de **14×14** (factor 2) o **7×7** (factor 4) píxeles, reducida a partir de las de 28×28 con `avg_pool2d`— y debe devolver una imagen de **28×28**. A diferencia de la eliminación de ruido, aquí la información que falta **no está en la entrada**: la red tiene que *inventar* los detalles.
+
+- **Entrada del modelo:** imagen reducida de 14×14 o 7×7 (factor elegido al azar en cada batch).
+- **Objetivo de la pérdida:** la imagen **original** de 28×28.
+- **Salida del modelo:** la imagen reconstruida a 28×28.
+
+La pérdida (MSE) se calcula siempre contra la imagen original, nunca contra la reducida: si no, la red aprendería a devolver la imagen pequeña, justo lo contrario de lo buscado.
+
+### Arquitectura
+
+El diseño sigue la receta clásica de la literatura (tipo SRCNN): **primero agrandar a lo bruto y después pulir a resolución completa**.
+
+```
+Entrada 14×14 / 7×7
+   │  F.interpolate(size=(28,28), mode='bilinear')     ← único punto donde cambia el tamaño
+   ▼
+Lienzo 28×28 (forma aproximada del dígito, suave)
+   │  Encoder: Conv2d 1→32→64→64 (kernel 3, padding=1, ReLU)   ← todo a 28×28
+   ▼  Decoder: Conv2d 64→64→32→1 (kernel 3, padding=1) + Sigmoid
+Salida 28×28 en [0,1]
+```
+
+- **`F.interpolate`** redimensiona la imagen pequeña a un lienzo de 28×28 interpolando entre píxeles vecinos. No inventa información (por eso sale suave), pero sitúa la forma del dígito en su posición correcta.
+- **Encoder/decoder:** seis convoluciones con `padding=1` que **conservan el tamaño** (28→28): extraen rasgos (1→32→64 canales) y los convierten en el gris final de cada píxel (64→32→1). Cada píxel de salida se calcula de una ventana local de 3×3, lo que permite **afilar bordes** en vez de estirar bloques.
+- **`downsample(images, factor)`** (en `superresolution.py`) reduce las imágenes con `avg_pool2d`: factor 2 → 14×14, factor 4 → 7×7.
+
+### Hiperparámetros
+
+| Parámetro | Valor |
+|---|---|
+| Reducción | factor aleatorio por batch: 2 (→14×14) o 4 (→7×7) |
+| Épocas | techo 40 con **early stopping** (paciencia 5): paró en la 17, mejor modelo en la **12** |
+| Optimizador | Adam (lr = 1e-3, weight_decay = 1e-5) |
+| Función de pérdida | MSE |
+| Batch size | 64 |
+| Validación | test set completo (con los dos factores) al final de cada época |
+| Dataset | MNIST (train para entrenar, test para validar y evaluar) |
+
+### Archivos
+
+| Archivo | Descripción |
+|---|---|
+| `superresolution.py` | Clase del modelo (interpolate + encoder/decoder) y función `downsample()` |
+| `train_superres.py` | Entrenamiento con validación por época y early stopping; guarda el mejor modelo y la curva |
+| `results_superres.py` | Carga el mejor modelo y genera la matriz de resultados y las métricas sobre el test |
+| `checkpoints/superres_autoencoder.pt` | Mejor modelo (época 12) |
+| `results/loss_curve_superres.png` | Curva de pérdida train vs test |
+| `results/superresolution.png` | Matriz de resultados (real / reducida / generada) |
+| `results/metrics_superres.json` | Métricas de entrenamiento, validación y test |
+
+### Cómo ejecutar
+
+```bash
+# 1. Entrenar (genera checkpoints/ y results/loss_curve_superres.png)
+python3 train_superres.py
+
+# 2. Generar resultados y métricas sobre el test set (genera results/superresolution.png)
+python3 results_superres.py
+```
+
+> Nota: la primera ejecución descarga el dataset MNIST automáticamente en `data/`.
+
+### Resultados
+
+**Curva de pérdida (train vs test)** — ambas curvas bajan juntas y se estancan hacia la época 12; el early stopping cortó en la 17. El test **nunca sube** mientras el train baja → **no hay sobreajuste**:
+
+![Curva train vs test](results/loss_curve_superres.png)
+
+**Matriz de resultados** — 3 filas × 10 columnas: imágenes reales (28×28), imágenes reducidas **a escala real** (14×14 al 50% y 7×7 al 25% del hueco) y las imágenes generadas por el autoencoder. Las 5 primeras columnas usan entrada de 14×14 y las 5 últimas de 7×7:
+
+![Super-resolution](results/superresolution.png)
+
+**Métricas sobre el test set** (comparando con ampliar la imagen reducida *a lo bruto* con interpolación nearest):
+
+| Métrica | 14×14 (bruto → red) | 7×7 (bruto → red) |
+|---|---|---|
+| MSE (menor = mejor) | 0.0157 → **0.0020** | 0.0371 → **0.0089** |
+| PSNR en dB (mayor = mejor) | 18.03 → **26.96** | 14.30 → **20.52** |
+
+### Conclusiones
+
+- La super-resolución con 14×14 es casi perfecta (**+8.9 dB** sobre ampliar a lo bruto): 196 píxeles conservan la forma del dígito y la red solo tiene que afilar los bordes.
+- Con 7×7 la mejora sigue siendo clara (**+6.2 dB**), pero aparece el **límite de la información**: con solo 49 píxeles, algunos dígitos reducidos son ilegibles ni siquiera para un humano (el 4 y el 8 de la matriz), y la red *adivina* la forma más plausible. No se puede recuperar lo que la entrada ya no contiene.
+- El **early stopping** confirmó la intuición de que sobraban épocas (paró en la 17 con un techo de 40), y la curva train/test demostró la **ausencia de sobreajuste**: las dos descienden juntas y el test nunca se deteriora.
+- El MSE tiende a producir bordes suaves: cuando la red duda entre dos formas posibles, predecir la media le sale más barato que arriesgar una forma concreta. Es un comportamiento conocido de la super-resolución optimizada con MSE.
